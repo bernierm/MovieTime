@@ -24,7 +24,7 @@ namespace MovieTime {
         document = new XmlDocument();
         document.Load(path);
         mainNode = SelectMainNode(mainNodeName);
-        return (mainNode!=null);
+        return (mainNode != null);
 
       } catch (Exception ex) {
         Debug.Log(string.Format("LoadSettings: Open exception: {0}", ex.Message));
@@ -77,12 +77,12 @@ namespace MovieTime {
     }
 
     public bool Save() {
-      if (document != null && path!="") {
+      if (document != null && path != "") {
         try {
           document.Save(path);
           return true;
         } catch (Exception ex) {
-          Debug.Log(string.Format("SaveSettings: Save exception: {0}",ex.Message));
+          Debug.Log(string.Format("SaveSettings: Save exception: {0}", ex.Message));
         }
       }
       return false;

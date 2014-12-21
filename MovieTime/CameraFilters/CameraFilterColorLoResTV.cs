@@ -3,7 +3,6 @@
 // Author: Marc Bernier
 //   Date: 2014-11-18
 
-using System;
 using UnityEngine;
 
 namespace MovieTime {
@@ -22,9 +21,8 @@ namespace MovieTime {
     private Texture2D overlay1 = null;
     private Texture2D overlay2 = null;
 
-    private DateTime rollTime = DateTime.Now;
-    private bool rolling = false;
-    private float rollOffset = 0;
+    private RandomJitter overlay2Jitter = new RandomJitter(0, 1, 1, 0);
+    private VHoldRoller vHoldRoller = new VHoldRoller();
 
     public CameraFilterColorLoResTV() : base() { }
 
@@ -34,8 +32,13 @@ namespace MovieTime {
       overlay1 = LoadTextureFile("CRTMesh.png");
       overlay2 = LoadTextureFile("Noise.png");
 
-      if (shader != null && vignette != null && overlay1 != null && overlay2 != null)
+      if (shader != null && vignette != null && overlay1 != null && overlay2 != null) {
+        vignette.wrapMode = TextureWrapMode.Repeat;
+        overlay2.wrapMode = TextureWrapMode.Repeat;
+        vHoldRoller.SetRollSpeed(rollSpeed);
+        vHoldRoller.SetRollFrequency(rollFrequency);
         return true;
+      }
 
       Deactivate();
       return false;
@@ -61,6 +64,9 @@ namespace MovieTime {
       rollSpeed = GetSliderValue("V-Hold Speed:", rollSpeed, -.05f, .05f);
       rollFrequency = (int)GetSliderValue("V-Hold Frequency:", rollFrequency, 0, 30);
       GUILayout.EndVertical();
+
+      vHoldRoller.SetRollSpeed(rollSpeed);
+      vHoldRoller.SetRollFrequency(rollFrequency);
     }
 
     public override void RenderImageWithFilter(RenderTexture source, RenderTexture target) {
@@ -72,26 +78,16 @@ namespace MovieTime {
         shader.SetFloat("_Monochrome", 0);
         shader.SetFloat("_Brightness", brightness);
 
-        shader.SetFloat("_VignetteAmount", vignetteAmount);
-        shader.SetFloat("_Overlay1Amount", overlay1Amount);
-        shader.SetFloat("_Overlay2Amount", overlay2Amount);
-
-        if (!rolling && rollFrequency > 0 && (DateTime.Now - rollTime).TotalSeconds >= rollFrequency) {
-          rolling = true;
-          rollOffset = 0;
-        } else if (rolling && rollOffset >= 1) {
-          rolling = false;
-          rollTime = DateTime.Now;
-        }
-
-        if (rolling) {
-          rollOffset += rollSpeed;
-          shader.SetFloat("_VignetteJitter", rollOffset);
-          shader.SetFloat("_MainTexJitter", rollOffset);
-        }
-
-        vignette.wrapMode = TextureWrapMode.Repeat;
         source.wrapMode = TextureWrapMode.Repeat;
+        shader.SetFloat("_VignetteAmount", vignetteAmount);
+        shader.SetFloat("_VignetteOffsetY", vHoldRoller.CalculcateRollOffset());
+        shader.SetFloat("_MainOffsetY", vHoldRoller.CalculcateRollOffset());
+
+        shader.SetFloat("_Overlay1Amount", overlay1Amount);
+
+        shader.SetFloat("_Overlay2Amount", overlay2Amount);
+        shader.SetFloat("_Overlay2OffsetX", overlay2Jitter.NextValue());
+        shader.SetFloat("_Overlay2OffsetY", overlay2Jitter.NextValue());
 
         Graphics.Blit(source, target, shader);
       } else {

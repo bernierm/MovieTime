@@ -29,7 +29,7 @@ namespace MovieTime {
     public override void OptionControls() {
     }
 
-    public override void LateUpdate() {
+    public override void LateUpdate(bool cameraActivated) {
       Vessel activeVessel = FlightGlobals.ActiveVessel;
       foreach (Part part in activeVessel.parts)
         SetPartGlow(part, true);
@@ -40,15 +40,15 @@ namespace MovieTime {
 
         part.SetHighlightColor(Color.magenta);
         part.SetHighlightType(Part.HighlightType.AlwaysOn);
-        part.SetHighlight(true);
+        part.SetHighlight(true, true);
 
       } else {
-/*        part.SetHighlightColor(Color.red);
-        part.SetHighlightType(Part.HighlightType.OnMouseOver);
-        part.SetHighlight(false);*/
+        /*        part.SetHighlightColor(Color.red);
+                part.SetHighlightType(Part.HighlightType.OnMouseOver);
+                part.SetHighlight(false);*/
       }
-/*      foreach (Part child in part.children)
-        SetPartGlow(part, active); */
+      /*      foreach (Part child in part.children)
+              SetPartGlow(part, active); */
     }
   }
 }

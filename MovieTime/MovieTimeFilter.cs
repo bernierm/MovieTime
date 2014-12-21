@@ -9,19 +9,29 @@ namespace MovieTime {
 
   // Manages creation/destruction of various camera filters.
   public class MovieTimeFilter : MonoBehaviour {
-    private CameraFilter cameraFilter = null;
-    static private CameraFilter.eCameraMode cameraMode = CameraFilter.eCameraMode.Normal;
 
-    public void Initialize() {
-      cameraFilter = CameraFilter.CreateFilter(cameraMode);
-      cameraFilter.Activate();
+    public enum eFilterType { Flight, InVehicle, Map };
+    private eFilterType filterType;
+
+    private static CameraFilter cameraFilter = null;
+    private static CameraFilter.eCameraMode cameraMode = CameraFilter.eCameraMode.Normal;
+
+    private static bool inVehicleView = true;
+    private static bool inMapView = false;
+
+    public void Initialize(eFilterType filtType) {
+      filterType = filtType;
+      if (cameraFilter == null) {
+        cameraFilter = CameraFilter.CreateFilter(cameraMode);
+        cameraFilter.Activate();
+      }
     }
 
     public void SetMode(CameraFilter.eCameraMode mode) {
       if (mode != cameraMode) {
         CameraFilter newFilter = CameraFilter.CreateFilter(mode);
         if (newFilter != null && newFilter.Activate()) {
-          cameraFilter.Deactivate();
+          if (cameraFilter != null) cameraFilter.Deactivate();
           cameraFilter = newFilter;
           cameraMode = mode;
         }
@@ -33,17 +43,22 @@ namespace MovieTime {
     }
 
     public void OptionControls() {
-      if (cameraFilter != null)
+      if (cameraFilter != null) {
+        GUILayout.BeginHorizontal();
+        inVehicleView = GUILayout.Toggle(inVehicleView, "IVA");
+        inMapView = GUILayout.Toggle(inMapView, "Map");
+        GUILayout.EndHorizontal();
         cameraFilter.OptionControls();
+      }
     }
 
     public void LateUpdate() {
       if (HighLogic.LoadedSceneIsFlight && cameraFilter != null)
-        cameraFilter.LateUpdate();
+        cameraFilter.LateUpdate(filterType == eFilterType.Flight || filterType == eFilterType.InVehicle && inVehicleView || filterType == eFilterType.Map && inMapView);
     }
 
     private void OnRenderImage(RenderTexture source, RenderTexture target) {
-      if (HighLogic.LoadedSceneIsFlight && cameraFilter != null)
+      if (cameraFilter != null && (filterType == eFilterType.Flight || filterType == eFilterType.InVehicle && inVehicleView || filterType == eFilterType.Map && inMapView))
         cameraFilter.RenderImageWithFilter(source, target);
       else
         Graphics.Blit(source, target);

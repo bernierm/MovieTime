@@ -10,14 +10,6 @@ using UnityEngine;
 
 namespace MovieTime {
 
-  // TODO:
-  //   * Save settings to config file
-  //   * Restore settings on load
-  //   * Better window layout
-  //   * V-hold interference on TV filters
-  //   * Thermal Vision filter?
-  //   * JJ Abrams filter?
-
   // Main class for MovieTime plugin. Manages initialization and GUI interaction.
   [KSPAddon(KSPAddon.Startup.Flight, false)]
   public class MovieTime : MonoBehaviour {
@@ -28,9 +20,11 @@ namespace MovieTime {
     private static bool settingsWindow = false;
 
     private static GUIStyle windowStyle = null;
-    private static Rect windowPosition = new Rect(0, 0, 300, 425);
+    private static Rect windowPosition = new Rect(0, 0, 300, 450);
 
-    private static MovieTimeFilter movieTimeFilter = null;
+    private static MovieTimeFilter mainCameraFilter = null;
+    private static MovieTimeFilter internalCameraFilter = null;
+    private static MovieTimeFilter mapCameraFilter = null;
 
     public MovieTime() {
       StartCoroutine("AddAppButton");
@@ -70,11 +64,23 @@ namespace MovieTime {
       if (windowStyle == null)
         windowStyle = new GUIStyle(HighLogic.Skin.window);
 
-      if (movieTimeFilter == null) {
+      if (mainCameraFilter == null) {
         Camera mainCamera = FlightCamera.fetch.mainCamera;
         mainCamera.gameObject.AddComponent<MovieTimeFilter>();
-        movieTimeFilter = mainCamera.gameObject.GetComponent<MovieTimeFilter>();
-        movieTimeFilter.Initialize();
+        mainCameraFilter = mainCamera.gameObject.GetComponent<MovieTimeFilter>();
+        mainCameraFilter.Initialize(MovieTimeFilter.eFilterType.Flight);
+      }
+      if (internalCameraFilter == null) {
+        Camera internalCamera = InternalCamera.Instance.camera;
+        internalCamera.gameObject.AddComponent<MovieTimeFilter>();
+        internalCameraFilter = internalCamera.gameObject.GetComponent<MovieTimeFilter>();
+        internalCameraFilter.Initialize(MovieTimeFilter.eFilterType.InVehicle);
+      }
+      if (mapCameraFilter == null) {
+        Camera mapCamera = MapView.MapCamera.camera;
+        mapCamera.gameObject.AddComponent<MovieTimeFilter>();
+        mapCameraFilter = mapCamera.gameObject.GetComponent<MovieTimeFilter>();
+        mapCameraFilter.Initialize(MovieTimeFilter.eFilterType.Map);
       }
 
       LoadSettings settings = new LoadSettings("MovieTime.xml");
@@ -106,12 +112,12 @@ namespace MovieTime {
     private void OnWindow(int id) {
       if (settingsWindow && id == windowId) {
         GUILayout.BeginHorizontal();
-        CameraFilter.eCameraMode mode = movieTimeFilter.GetMode();
+        CameraFilter.eCameraMode mode = mainCameraFilter.GetMode();
         mode = (CameraFilter.eCameraMode)GUILayout.SelectionGrid((int)mode, Enum.GetNames(typeof(CameraFilter.eCameraMode)), 1);
         GUILayout.EndHorizontal();
 
-        movieTimeFilter.OptionControls();
-        movieTimeFilter.SetMode(mode);
+        mainCameraFilter.OptionControls();
+        mainCameraFilter.SetMode(mode);
 
         GUI.DragWindow();
       }
@@ -132,22 +138,22 @@ namespace MovieTime {
     }
 
     private void LateUpdate() {
-      if (movieTimeFilter != null)
-        movieTimeFilter.LateUpdate();
+      if (mainCameraFilter != null)
+        mainCameraFilter.LateUpdate();
     }
 
     private static void LoadSettings(LoadSettings settings) {
       settings.SelectNode("Main");
       settingsWindow = settings.Get<bool>("SettingsWindow", settingsWindow);
-      windowPosition.yMin = settings.Get<float>("Top", windowPosition.yMin);
-      windowPosition.xMin = settings.Get<float>("Left", windowPosition.xMin);
+      windowPosition.y = settings.Get<float>("Top", windowPosition.y);
+      windowPosition.x = settings.Get<float>("Left", windowPosition.x);
     }
 
     private static void SaveSettings(SaveSettings settings) {
       settings.SelectNode("Main");
       settings.Set<bool>("SettingsWindow", settingsWindow);
-      settings.Set<float>("Top", windowPosition.yMin);
-      settings.Set<float>("Left", windowPosition.xMin);
+      settings.Set<float>("Top", windowPosition.y);
+      settings.Set<float>("Left", windowPosition.x);
     }
   }
 }

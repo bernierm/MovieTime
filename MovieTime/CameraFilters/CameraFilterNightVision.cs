@@ -59,12 +59,11 @@ namespace MovieTime {
       GUILayout.EndVertical();
     }
 
-    public override void LateUpdate() {
-      Color ambienceColor = RenderSettings.ambientLight;
-      ambienceColor.r = ambienceLevel;
-      ambienceColor.g = ambienceLevel;
-      ambienceColor.b = ambienceLevel;
-      RenderSettings.ambientLight = ambienceColor;
+    public override void LateUpdate(bool cameraActivated) {
+      if (cameraActivated)
+        RenderSettings.ambientLight = new Color(ambienceLevel, ambienceLevel, ambienceLevel, 1);
+      else
+        RenderSettings.ambientLight = new Color(defaultAmbienceLevel, defaultAmbienceLevel, defaultAmbienceLevel, 1);
     }
 
     public override void RenderImageWithFilter(RenderTexture source, RenderTexture target) {

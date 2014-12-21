@@ -9,11 +9,6 @@ namespace MovieTime {
   public class CameraFilterColorFilm : CameraFilter {
     private static float brightness = .35f;
 
-    private static float overlay1XSpeed = 0;
-    private static float overlay1YSpeed = -50;
-    private static float overlay2XSpeed = 0;
-    private static float overlay2YSpeed = 0;
-
     private static float vignetteAmount = .45f;
     private static float overlay1Amount = .67f;
     private static float overlay2Amount = .88f;
@@ -23,6 +18,13 @@ namespace MovieTime {
     private Texture2D vignette = null;
     private Texture2D overlay1 = null;
     private Texture2D overlay2 = null;
+
+    private RandomJitter brightnessJitter = new RandomJitter(.95f, 1.05f, .01f, 0);
+    private RandomJitter vignetteXJitter = new RandomJitter(-.001f, .001f, .0005f, 0);
+    private RandomJitter vignetteYJitter = new RandomJitter(-.001f, .001f, .0005f, 0);
+    private RandomJitter overlay1XJitter = new RandomJitter(0, 1, .1f, 10000);
+    private RandomJitter overlay2XJitter = new RandomJitter(0, 1, 1, 300);
+    private RandomJitter overlay2YJitter = new RandomJitter(0, 1, 1, 300);
 
     public CameraFilterColorFilm() : base() { }
 
@@ -59,8 +61,6 @@ namespace MovieTime {
       GUILayout.EndVertical();
     }
 
-    private float jitterState = 0;
-
     public override void RenderImageWithFilter(RenderTexture source, RenderTexture target) {
       if (shader != null && vignette != null && overlay1 != null && overlay2 != null) {
         shader.SetTexture("_VignetteTex", vignette);
@@ -69,23 +69,21 @@ namespace MovieTime {
 
         shader.SetFloat("_Monochrome", 0);
         shader.SetFloat("_Brightness", brightness);
-
-        shader.SetFloat("_XSpeedOverlay1", overlay1XSpeed);
-        shader.SetFloat("_YSpeedOverlay1", overlay1YSpeed);
-        shader.SetFloat("_XSpeedOverlay2", overlay2XSpeed);
-        shader.SetFloat("_YSpeedOverlay2", overlay2YSpeed);
+        shader.SetFloat("_BrightnessJitter", brightnessJitter.NextValue());
 
         shader.SetFloat("_VignetteAmount", vignetteAmount);
+        shader.SetFloat("_MainOffsetX", vignetteXJitter.NextValue());
+        shader.SetFloat("_MainOffsetY", vignetteYJitter.NextValue());
+        shader.SetFloat("_VignetteOffsetX", vignetteXJitter.Value());
+        shader.SetFloat("_VignetteOffsetY", vignetteYJitter.Value());
+
         shader.SetFloat("_Overlay1Amount", overlay1Amount);
+        shader.SetFloat("_Overlay1SpeedY", -50);
+        shader.SetFloat("_Overlay1OffsetX", overlay1XJitter.NextValue());
+
         shader.SetFloat("_Overlay2Amount", overlay2Amount);
-
-        jitterState = RandomJitterState(jitterState, -.001f, .001f, .0005f);
-
-        shader.SetFloat("_MainTexJitter", jitterState);
-        shader.SetFloat("_VignetteJitter", jitterState);
-        shader.SetFloat("_Overlay1Jitter", RandomJitter(-.25f, .25f));
-        shader.SetFloat("_Overlay2Jitter", RandomJitter(-.25f, .25f));
-        shader.SetFloat("_BrightnessJitter", RandomJitter(.98f, 1.02f));
+        shader.SetFloat("_Overlay2OffsetX", overlay2XJitter.NextValue());
+        shader.SetFloat("_Overlay2OffsetY", overlay2YJitter.NextValue());
 
         Graphics.Blit(source, target, shader);
       } else {
@@ -96,10 +94,6 @@ namespace MovieTime {
     public static void LoadSettings(LoadSettings settings) {
       settings.SelectNode("CameraFilterColorFilm");
       brightness = settings.Get<float>("Brightness", brightness);
-      overlay1XSpeed = settings.Get<float>("Overlay1XSpeed", overlay1XSpeed);
-      overlay1YSpeed = settings.Get<float>("Overlay1YSpeed", overlay1YSpeed);
-      overlay2XSpeed = settings.Get<float>("Overlay2XSpeed", overlay2XSpeed);
-      overlay2YSpeed = settings.Get<float>("Overlay2YSpeed", overlay2YSpeed);
       vignetteAmount = settings.Get<float>("VignetteAmount", vignetteAmount);
       overlay1Amount = settings.Get<float>("Overlay1Amount", overlay1Amount);
       overlay2Amount = settings.Get<float>("Overlay2Amount", overlay2Amount);
@@ -108,10 +102,6 @@ namespace MovieTime {
     public static void SaveSettings(SaveSettings settings) {
       settings.SelectNode("CameraFilterColorFilm");
       settings.Set<float>("Brightness", brightness);
-      settings.Set<float>("Overlay1XSpeed", overlay1XSpeed);
-      settings.Set<float>("Overlay1YSpeed", overlay1YSpeed);
-      settings.Set<float>("Overlay2XSpeed", overlay2XSpeed);
-      settings.Set<float>("Overlay2YSpeed", overlay2YSpeed);
       settings.Set<float>("VignetteAmount", vignetteAmount);
       settings.Set<float>("Overlay1Amount", overlay1Amount);
       settings.Set<float>("Overlay2Amount", overlay2Amount);

@@ -81,7 +81,7 @@ namespace MovieTime {
 
     public virtual void OptionControls() { }
 
-    public virtual void LateUpdate() { }
+    public virtual void LateUpdate(bool cameraActivated) { }
 
     public virtual void RenderImageWithFilter(RenderTexture source, RenderTexture target) {
       Graphics.Blit(source, target);
@@ -103,19 +103,9 @@ namespace MovieTime {
       return retVal;
     }
 
-    private System.Random random = new System.Random();
-
-    protected float RandomJitter(float lowerLimit, float upperLimit) {
-      return lowerLimit + (random.Next(100) * (upperLimit - lowerLimit)) / 100;
-    }
-
-    protected float RandomJitterState(float currentValue, float lowerLimit, float upperLimit, float variance) {
-      return Math.Min(Math.Max(currentValue + RandomJitter(-variance,variance),lowerLimit), upperLimit);
-    }
-
     public static Material LoadShaderFile(string fileName) {
       try {
-        string path=KSPUtil.ApplicationRootPath.Replace(@"\", "/")+"/GameData/MovieTime/Shaders/"+fileName;
+        string path = KSPUtil.ApplicationRootPath.Replace(@"\", "/") + "/GameData/MovieTime/Shaders/" + fileName;
 
         StreamReader reader = new StreamReader(path);
         string shader = reader.ReadToEnd();
@@ -129,7 +119,17 @@ namespace MovieTime {
 
     public static Texture2D LoadTextureFile(string fileName) {
       try {
-        string path=KSPUtil.ApplicationRootPath.Replace(@"\", "/")+"/GameData/MovieTime/Textures/"+fileName;
+        string path;
+
+        if (Screen.height <= 850)
+          path = KSPUtil.ApplicationRootPath.Replace(@"\", "/") + "/GameData/MovieTime/Textures/Low/" + fileName;
+        else if (Screen.height <= 1000)
+          path = KSPUtil.ApplicationRootPath.Replace(@"\", "/") + "/GameData/MovieTime/Textures/Medium/" + fileName;
+        else
+          path = KSPUtil.ApplicationRootPath.Replace(@"\", "/") + "/GameData/MovieTime/Textures/High/" + fileName;
+
+        if (!File.Exists(path))
+          path = KSPUtil.ApplicationRootPath.Replace(@"\", "/") + "/GameData/MovieTime/Textures/" + fileName;
 
         byte[] texture = File.ReadAllBytes(path);
         Texture2D retVal = new Texture2D(1, 1);

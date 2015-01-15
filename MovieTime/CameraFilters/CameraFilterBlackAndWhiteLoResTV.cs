@@ -7,20 +7,14 @@ using UnityEngine;
 
 namespace MovieTime {
   public class CameraFilterBlackAndWhiteLoResTV : CameraFilter {
-    private static float contrast = 4;
-    private static float brightness = .62f;
+    private float contrast = 4;
+    private float brightness = .62f;
 
-    private static float vignetteAmount = .3f;
-    private static float overlay1Amount = .15f;
-    private static float overlay2Amount = .56f;
-    private static int rollFrequency = 10;
-    private static float rollSpeed = .02f;
-
-    private Material shader = null;
-
-    private Texture2D vignette = null;
-    private Texture2D overlay1 = null;
-    private Texture2D overlay2 = null;
+    private float vignetteAmount = .3f;
+    private float overlay1Amount = .15f;
+    private float overlay2Amount = .56f;
+    private int rollFrequency = 10;
+    private float rollSpeed = .02f;
 
     private RandomJitter overlay2Jitter = new RandomJitter(0, 1, 1, 0);
     private VHoldRoller vHoldRoller = new VHoldRoller();
@@ -28,32 +22,9 @@ namespace MovieTime {
     public CameraFilterBlackAndWhiteLoResTV() : base() { }
 
     public override bool Activate() {
-      shader = LoadShaderFile("MovieTime.shader");
-      vignette = LoadTextureFile("VHold.png");
-      overlay1 = LoadTextureFile("CRTMesh.png");
-      overlay2 = LoadTextureFile("Noise.png");
-
-      if (shader != null && vignette != null && overlay1 != null && overlay2 != null) {
-        vignette.wrapMode = TextureWrapMode.Repeat;
-        overlay2.wrapMode = TextureWrapMode.Repeat;
-        vHoldRoller.SetRollSpeed(rollSpeed);
-        vHoldRoller.SetRollFrequency(rollFrequency);
-        return true;
-      }
-
-      Deactivate();
-      return false;
-    }
-
-    public override void Deactivate() {
-      if (shader != null) MonoBehaviour.Destroy(shader);
-      shader = null;
-      if (vignette != null) MonoBehaviour.Destroy(vignette);
-      vignette = null;
-      if (overlay1 != null) MonoBehaviour.Destroy(overlay1);
-      overlay1 = null;
-      if (overlay2 != null) MonoBehaviour.Destroy(overlay2);
-      overlay2 = null;
+      vHoldRoller.SetRollSpeed(rollSpeed);
+      vHoldRoller.SetRollFrequency(rollFrequency);
+      return true;
     }
 
     public override void OptionControls() {
@@ -72,35 +43,54 @@ namespace MovieTime {
     }
 
     public override void RenderImageWithFilter(RenderTexture source, RenderTexture target) {
-      if (shader != null && overlay1 != null && overlay2 != null) {
-        shader.SetTexture("_VignetteTex", vignette);
-        shader.SetTexture("_Overlay1Tex", overlay1);
-        shader.SetTexture("_Overlay2Tex", overlay2);
+      if (mtShader != null && vHold != null && crtMesh != null && noise != null) {
 
-        shader.SetFloat("_Monochrome", 1);
-        shader.SetColor("_MonoColor", new Color(.5f, .5f, .5f, 1));
-        shader.SetFloat("_Contrast", contrast);
-        shader.SetFloat("_Brightness", brightness);
+        mtShader.SetTexture("_VignetteTex", vHold);
+        mtShader.SetTexture("_Overlay1Tex", crtMesh);
+        mtShader.SetTexture("_Overlay2Tex", noise);
+
+        mtShader.SetFloat("_Monochrome", 1);
+        mtShader.SetColor("_MonoColor", new Color(.5f, .5f, .5f, 1));
+        mtShader.SetFloat("_ColorJitter", 1);
+        mtShader.SetFloat("_Contrast", contrast);
+        mtShader.SetFloat("_ContrastJitter", 1);
+        mtShader.SetFloat("_Brightness", brightness);
+        mtShader.SetFloat("_BrightnessJitter", 1);
 
         source.wrapMode = TextureWrapMode.Repeat;
-        shader.SetFloat("_VignetteAmount", vignetteAmount);
-        shader.SetFloat("_VignetteOffsetY", vHoldRoller.CalculcateRollOffset());
-        shader.SetFloat("_MainOffsetY", vHoldRoller.CalculcateRollOffset());
+        mtShader.SetFloat("_MainOffsetX", 0);
+        mtShader.SetFloat("_MainOffsetY", vHoldRoller.CalculcateRollOffset());
+        mtShader.SetFloat("_MainSpeedX", 0);
+        mtShader.SetFloat("_MainSpeedY", 0);
 
-        shader.SetFloat("_Overlay1Amount", overlay1Amount);
+        mtShader.SetFloat("_VignetteAmount", vignetteAmount);
+        mtShader.SetFloat("_VignetteOffsetX", 0);
+        mtShader.SetFloat("_VignetteOffsetY", vHoldRoller.GetRollOffset());
+        mtShader.SetFloat("_VignetteSpeedX", 0);
+        mtShader.SetFloat("_VignetteSpeedY", 0);
 
-        shader.SetFloat("_Overlay2Amount", overlay2Amount);
-        shader.SetFloat("_Overlay2OffsetX", overlay2Jitter.NextValue());
-        shader.SetFloat("_Overlay2OffsetY", overlay2Jitter.NextValue());
+        mtShader.SetFloat("_Overlay1Amount", overlay1Amount);
+        mtShader.SetFloat("_Overlay1OffsetX", 0);
+        mtShader.SetFloat("_Overlay1OffsetY", 0);
+        mtShader.SetFloat("_Overlay1SpeedX", 0);
+        mtShader.SetFloat("_Overlay1SpeedY", 0);
 
-        Graphics.Blit(source, target, shader);
+        mtShader.SetFloat("_Overlay2Amount", overlay2Amount);
+        mtShader.SetFloat("_Overlay2OffsetX", overlay2Jitter.NextValue());
+        mtShader.SetFloat("_Overlay2OffsetY", overlay2Jitter.NextValue());
+        mtShader.SetFloat("_Overlay2SpeedX", 0);
+        mtShader.SetFloat("_Overlay2SpeedY", 0);
+
+        Graphics.Blit(source, target, mtShader);
       } else {
         base.RenderImageWithFilter(source, target);
       }
     }
 
-    public static void LoadSettings(LoadSettings settings) {
-      settings.SelectNode("CameraFilterBlackAndWhiteLoResTV");
+    public override void Load(string moduleName) {
+      LoadSettings settings = new LoadSettings("MovieTime.xml");
+      settings.Open("MovieTime");
+      settings.SelectNode(moduleName + "BlackAndWhiteLoResTV");
       contrast = settings.Get<float>("Contrast", contrast);
       brightness = settings.Get<float>("Brightness", brightness);
       vignetteAmount = settings.Get<float>("VignetteAmount", vignetteAmount);
@@ -110,8 +100,10 @@ namespace MovieTime {
       rollSpeed = settings.Get<float>("RollSpeed", rollSpeed);
     }
 
-    public static void SaveSettings(SaveSettings settings) {
-      settings.SelectNode("CameraFilterBlackAndWhiteLoResTV");
+    public override void Save(string moduleName) {
+      SaveSettings settings = new SaveSettings("MovieTime.xml");
+      settings.Open("MovieTime");
+      settings.SelectNode(moduleName + "BlackAndWhiteLoResTV");
       settings.Set<float>("Contrast", contrast);
       settings.Set<float>("Brightness", brightness);
       settings.Set<float>("VignetteAmount", vignetteAmount);
@@ -119,6 +111,7 @@ namespace MovieTime {
       settings.Set<float>("Overlay2Amount", overlay2Amount);
       settings.Set<int>("RollFrequency", rollFrequency);
       settings.Set<float>("RollSpeed", rollSpeed);
+      settings.Save();
     }
   }
 }

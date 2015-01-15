@@ -25,7 +25,6 @@ namespace MovieTime {
         document.Load(path);
         mainNode = SelectMainNode(mainNodeName);
         return (mainNode != null);
-
       } catch (Exception ex) {
         Debug.Log(string.Format("LoadSettings: Open exception: {0}", ex.Message));
         return false;
@@ -51,7 +50,22 @@ namespace MovieTime {
           value = (currentNode.GetElementsByTagName(key)[0]).InnerText;
           return (T)Convert.ChangeType(value, typeof(T));
         }
-      } catch { }
+      } catch (Exception ex) {
+        Debug.Log(string.Format("LoadSettings: Get<{0}>({1}=>{2}", typeof(T), key, ex.Message));
+      }
+      return defValue;
+    }
+
+    public T GetEnumerator<T>(string key, T defValue) where T : struct, IConvertible {
+      try {
+        string value = "";
+        if (currentNode != null && currentNode.GetElementsByTagName(key).Count > 0) {
+          value = (currentNode.GetElementsByTagName(key)[0]).InnerText;
+          return (T)Enum.Parse(typeof(T), value);
+        }
+      } catch (Exception ex) {
+        Debug.Log(string.Format("LoadSettings: GetEnumerator<{0}>({1}=>{2}", typeof(T), key, ex.Message));
+      }
       return defValue;
     }
   }

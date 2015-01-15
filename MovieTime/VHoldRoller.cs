@@ -4,7 +4,6 @@
 //   Date: 2014-12-20
 
 using System;
-using UnityEngine;
 
 namespace MovieTime {
   public class VHoldRoller {
@@ -42,6 +41,10 @@ namespace MovieTime {
         return rollOffset;
       }
       return 0;
+    }
+
+    public float GetRollOffset() {
+      return rollOffset;
     }
   }
 }

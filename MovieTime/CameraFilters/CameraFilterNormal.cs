@@ -17,9 +17,5 @@ namespace MovieTime {
     public override void RenderImageWithFilter(RenderTexture source, RenderTexture target) {
       Graphics.Blit(source, target);
     }
-
-    public static void LoadSettings(LoadSettings settings) { }
-
-    public static void SaveSettings(SaveSettings settings) { }
   }
 }

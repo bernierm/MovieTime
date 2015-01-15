@@ -29,7 +29,7 @@ namespace MovieTime {
     public override void OptionControls() {
     }
 
-    public override void LateUpdate(bool cameraActivated) {
+    public override void LateUpdate() {
       Vessel activeVessel = FlightGlobals.ActiveVessel;
       foreach (Part part in activeVessel.parts)
         SetPartGlow(part, true);

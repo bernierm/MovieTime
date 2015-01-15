@@ -1,6 +1,7 @@
 ﻿Shader "Custom/MovieTime" {
 	Properties {
 		_MainTex("Base Texture", 2D)="white" {}
+		_TitleTex("Title Texture", 2D)="black" {}
 		_VignetteTex("Vignette Texture", 2D)="white" {}
 		_Overlay1Tex("Overlay 1 Texture", 2D)="white" {}
 		_Overlay2Tex("Overlay 2 Texture", 2D)="white" {}
@@ -9,6 +10,8 @@
 		_MonoColor("Monochrome Color", Color)=(0,0,0,0)
 		_Contrast("Contrast", Range(0,4))=2
 		_Brightness("Brightness", Range(0,2))=1
+
+		_Title("Overlay Title", Float)=0
 
 		_MainOffsetX("Main Offset X", Range(0,1))=0
 		_MainOffsetY("Main Offset Y", Range(0,1))=0
@@ -40,12 +43,14 @@
 	SubShader {
 		Pass {
 			CGPROGRAM
+			#pragma target 3.0
 			#pragma vertex vert_img
 			#pragma fragment frag
 			#pragma fragmentoption ARB_precision_hint_fastest
 			#include "UnityCG.cginc"
 
 			uniform sampler2D _MainTex;
+			uniform sampler2D _TitleTex;
 			uniform sampler2D _VignetteTex;
 			uniform sampler2D _Overlay1Tex;
 			uniform sampler2D _Overlay2Tex;
@@ -54,6 +59,8 @@
 			fixed4 _MonoColor;
 			fixed _Contrast;
 			fixed _Brightness;
+
+			float _Title;
 
 			float _MainOffsetX;
 			float _MainOffsetY;
@@ -85,8 +92,11 @@
 			fixed4 frag(v2f_img i) : COLOR {
 				fixed3 constantWhite=fixed3(1,1,1);
 
-				half2 renderTexUV=half2(i.uv.x+_MainOffsetX+_Time.x*_MainSpeedX, i.uv.y+_MainOffsetY+_Time.x*_MainSpeedY);
+				half2 renderTexUV = half2(i.uv.x+_MainOffsetX+_Time.x*_MainSpeedX, i.uv.y+_MainOffsetY+_Time.x*_MainSpeedY);
 				fixed4 renderTex = tex2D(_MainTex, renderTexUV);
+
+				half2 titleUV = half2(i.uv.x+_MainOffsetX+_Time.x*_MainSpeedX, i.uv.y+_MainOffsetY+_Time.x*_MainSpeedY);
+				fixed4 titleTex = tex2D(_TitleTex, titleUV);
 
 				half2 vignetteUV = half2(i.uv.x+_VignetteOffsetX+_Time.x*_VignetteSpeedX, i.uv.y+_VignetteOffsetY+_Time.x*_VignetteSpeedY);
 				fixed4 vignetteTex = tex2D(_VignetteTex, vignetteUV);
@@ -105,6 +115,13 @@
 				} else {
 					renderTex.rgb=(renderTex.rgb-0.5f)*_Contrast+_ContrastJitter*0.5f;
 					renderTex.rgb+=_Brightness*_BrightnessJitter;
+				}
+
+				if (_Title!=0 && titleTex.a>=1) {
+					renderTex.rgb=titleTex.rgb;
+				} else if (_Title!=0 && titleTex.a>0) {
+					renderTex.rgb=dot(fixed3(0.299, 0.587, 0.144), renderTex.rgb);
+					renderTex.rgb=titleTex.rgb*titleTex.a-renderTex.rgb*(1-titleTex.a);
 				}
 
 				renderTex.rgb*=lerp(vignetteTex.rgb, constantWhite, _VignetteAmount);

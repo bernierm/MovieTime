@@ -6,36 +6,83 @@
 using UnityEngine;
 
 namespace MovieTime {
-
-  // Manages creation/destruction of various camera filters.
   public class MovieTimeFilter : MonoBehaviour {
+    public enum eFilterType { Flight, Map, SpaceCentre, TrackingStation };
 
-    public enum eFilterType { Flight, InVehicle, Map };
+    protected static eFilterType currentMode;
+
+    private string moduleName = "";
+    private CameraFilter cameraFilter = null;
+    private CameraFilter.eCameraMode cameraMode;
     private eFilterType filterType;
 
-    private static CameraFilter cameraFilter = null;
-    private static CameraFilter.eCameraMode cameraMode = CameraFilter.eCameraMode.Normal;
+    private bool title = false;
+    private string titleFile = "";
+    private Texture2D titleTexture = null;
 
-    private static bool inVehicleView = true;
-    private static bool inMapView = false;
+    public MovieTimeFilter() {
+    }
 
-    public void Initialize(eFilterType filtType) {
+    public void Initialize(string module, eFilterType filtType, bool initializeCamera = true) {
+      moduleName = module;
       filterType = filtType;
-      if (cameraFilter == null) {
+      LoadSettings(moduleName);
+
+      if (initializeCamera) {
         cameraFilter = CameraFilter.CreateFilter(cameraMode);
         cameraFilter.Activate();
       }
+      currentMode = (filterType == eFilterType.Map ? eFilterType.Flight : filterType);
+
+      if (titleFile != "")
+        titleTexture = CameraFilter.LoadTextureFile(titleFile);
+    }
+
+    public void Save() {
+      SaveSettings(moduleName);
+      if (cameraFilter != null) cameraFilter.Save(moduleName);
+      if (titleTexture != null) MonoBehaviour.Destroy(titleTexture);
+      titleTexture = null;
     }
 
     public void SetMode(CameraFilter.eCameraMode mode) {
       if (mode != cameraMode) {
         CameraFilter newFilter = CameraFilter.CreateFilter(mode);
         if (newFilter != null && newFilter.Activate()) {
-          if (cameraFilter != null) cameraFilter.Deactivate();
+          if (cameraFilter != null) {
+            cameraFilter.Save(moduleName);
+            cameraFilter.Deactivate();
+          }
           cameraFilter = newFilter;
+          cameraFilter.Load(moduleName);
           cameraMode = mode;
         }
       }
+    }
+
+    public void ToggleTitleMode() {
+      title = !title;
+    }
+
+    public void RefreshTitleTexture() {
+      LoadSettings settings = new LoadSettings("MovieTime.xml");
+      settings.Open("MovieTime");
+      settings.SelectNode(moduleName);
+      titleFile = settings.Get<string>("TitleFile", "");
+
+      if (titleTexture != null)
+        MonoBehaviour.Destroy(titleTexture);
+      titleTexture = null;
+      if (titleFile != "")
+        titleTexture = CameraFilter.LoadTextureFile(titleFile);
+    }
+
+    public CameraFilter GetFilter() {
+      return cameraFilter;
+    }
+
+    public void SetFilter(CameraFilter filter) {
+      cameraFilter = filter;
     }
 
     public CameraFilter.eCameraMode GetMode() {
@@ -44,34 +91,49 @@ namespace MovieTime {
 
     public void OptionControls() {
       if (cameraFilter != null) {
-        GUILayout.BeginHorizontal();
-        inVehicleView = GUILayout.Toggle(inVehicleView, "IVA");
-        inMapView = GUILayout.Toggle(inMapView, "Map");
-        GUILayout.EndHorizontal();
+        GUILayout.BeginVertical();
+        title = GUILayout.Toggle(title, "Title Mode");
+        GUILayout.EndVertical();
         cameraFilter.OptionControls();
       }
     }
 
     public void LateUpdate() {
-      if (HighLogic.LoadedSceneIsFlight && cameraFilter != null)
-        cameraFilter.LateUpdate(filterType == eFilterType.Flight || filterType == eFilterType.InVehicle && inVehicleView || filterType == eFilterType.Map && inMapView);
+      if (cameraFilter != null)
+        cameraFilter.LateUpdate();
     }
 
     private void OnRenderImage(RenderTexture source, RenderTexture target) {
-      if (cameraFilter != null && (filterType == eFilterType.Flight || filterType == eFilterType.InVehicle && inVehicleView || filterType == eFilterType.Map && inMapView))
+      if (cameraFilter != null && filterType == LoadedScene()) {
+        cameraFilter.RenderTitlePage(title, titleTexture);
         cameraFilter.RenderImageWithFilter(source, target);
-      else
+      } else {
         Graphics.Blit(source, target);
+      }
     }
 
-    public static void LoadSettings(LoadSettings settings) {
-      settings.SelectNode("MovieTimeFilter");
-      cameraMode = settings.Get<CameraFilter.eCameraMode>("CameraMode", cameraMode);
+    private void LoadSettings(string module) {
+      LoadSettings settings = new LoadSettings("MovieTime.xml");
+      settings.Open("MovieTime");
+      settings.SelectNode(module);
+      cameraMode = settings.GetEnumerator<CameraFilter.eCameraMode>("CameraMode", CameraFilter.eCameraMode.Normal);
+      titleFile = settings.Get<string>("TitleFile", "");
     }
 
-    public static void SaveSettings(SaveSettings settings) {
-      settings.SelectNode("MovieTimeFilter");
+    private void SaveSettings(string module) {
+      SaveSettings settings = new SaveSettings("MovieTime.xml");
+      settings.Open("MovieTime");
+      settings.SelectNode(module);
       settings.Set<CameraFilter.eCameraMode>("CameraMode", cameraMode);
+      settings.Save();
+    }
+
+    public static eFilterType LoadedScene() {
+      if (currentMode == eFilterType.Flight && !MapView.MapIsEnabled)
+        return eFilterType.Flight;
+      else if (currentMode == eFilterType.Flight && MapView.MapIsEnabled)
+        return eFilterType.Map;
+      return currentMode;
     }
   }
 }

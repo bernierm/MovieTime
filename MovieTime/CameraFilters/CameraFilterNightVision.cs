@@ -7,46 +7,27 @@ using UnityEngine;
 
 namespace MovieTime {
   public class CameraFilterNightVision : CameraFilter {
-    private static float contrast = 4;
-    private static float brightness = .41f;
+    private float contrast = 4;
+    private float brightness = .41f;
 
-    private static float overlay1Amount = .86f;
-    private static float overlay2Amount = .86f;
+    private float overlay1Amount = .86f;
+    private float overlay2Amount = .86f;
 
-    private static float ambienceLevel = .5f;
+    private float ambienceLevel = .5f;
 
     private float defaultAmbienceLevel = 0;
 
-    private Material shader = null;
-
-    private Texture2D overlay1 = null;
-    private Texture2D overlay2 = null;
+    private RandomJitter overlay2Jitter = new RandomJitter(0, 1, 1, 0);
 
     public CameraFilterNightVision() : base() { }
 
     public override bool Activate() {
-      shader = LoadShaderFile("MovieTime.shader");
-      overlay1 = LoadTextureFile("NVMesh.png");
-      overlay2 = LoadTextureFile("Noise.png");
-
       defaultAmbienceLevel = RenderSettings.ambientLight.r;
-
-      if (shader != null && overlay1 != null & overlay2 != null)
-        return true;
-
-      Deactivate();
-      return false;
+      return true;
     }
 
     public override void Deactivate() {
       RenderSettings.ambientLight = new Color(defaultAmbienceLevel, defaultAmbienceLevel, defaultAmbienceLevel, 1);
-
-      if (shader != null) MonoBehaviour.Destroy(shader);
-      shader = null;
-      if (overlay1 != null) MonoBehaviour.Destroy(overlay1);
-      overlay1 = null;
-      if (overlay2 != null) MonoBehaviour.Destroy(overlay2);
-      overlay2 = null;
     }
 
     public override void OptionControls() {
@@ -59,34 +40,57 @@ namespace MovieTime {
       GUILayout.EndVertical();
     }
 
-    public override void LateUpdate(bool cameraActivated) {
-      if (cameraActivated)
-        RenderSettings.ambientLight = new Color(ambienceLevel, ambienceLevel, ambienceLevel, 1);
-      else
-        RenderSettings.ambientLight = new Color(defaultAmbienceLevel, defaultAmbienceLevel, defaultAmbienceLevel, 1);
+    public override void LateUpdate() {
+      RenderSettings.ambientLight = new Color(ambienceLevel, ambienceLevel, ambienceLevel, 1);
     }
 
     public override void RenderImageWithFilter(RenderTexture source, RenderTexture target) {
-      if (shader != null && overlay1 != null && overlay2 != null) {
-        shader.SetTexture("_Overlay1Tex", overlay1);
-        shader.SetTexture("_Overlay2Tex", overlay2);
+      if (mtShader != null && nvMesh != null && noise != null) {
 
-        shader.SetFloat("_Monochrome", 1);
-        shader.SetColor("_MonoColor", new Color(0, .5f, 0, 1));
-        shader.SetFloat("_Contrast", contrast);
-        shader.SetFloat("_Brightness", brightness);
+        mtShader.SetTexture("_Overlay1Tex", nvMesh);
+        mtShader.SetTexture("_Overlay2Tex", noise);
 
-        shader.SetFloat("_Overlay1Amount", overlay1Amount);
-        shader.SetFloat("_Overlay2Amount", overlay2Amount);
+        mtShader.SetFloat("_Monochrome", 1);
+        mtShader.SetColor("_MonoColor", new Color(0, .5f, 0, 1));
+        mtShader.SetFloat("_ColorJitter", 1);
+        mtShader.SetFloat("_Contrast", contrast);
+        mtShader.SetFloat("_ContrastJitter", 1);
+        mtShader.SetFloat("_Brightness", brightness);
+        mtShader.SetFloat("_BrightnessJitter", 1);
 
-        Graphics.Blit(source, target, shader);
+        mtShader.SetFloat("_MainOffsetX", 0);
+        mtShader.SetFloat("_MainOffsetY", 0);
+        mtShader.SetFloat("_MainSpeedX", 0);
+        mtShader.SetFloat("_MainSpeedY", 0);
+
+        mtShader.SetFloat("_VignetteAmount", 1);
+        mtShader.SetFloat("_VignetteOffsetX", 0);
+        mtShader.SetFloat("_VignetteOffsetY", 0);
+        mtShader.SetFloat("_VignetteSpeedX", 0);
+        mtShader.SetFloat("_VignetteSpeedY", 0);
+
+        mtShader.SetFloat("_Overlay1Amount", overlay1Amount);
+        mtShader.SetFloat("_Overlay1OffsetX", 0);
+        mtShader.SetFloat("_Overlay1OffsetY", 0);
+        mtShader.SetFloat("_Overlay1SpeedX", 0);
+        mtShader.SetFloat("_Overlay1SpeedY", 0);
+
+        mtShader.SetFloat("_Overlay2Amount", overlay2Amount);
+        mtShader.SetFloat("_Overlay2OffsetX", overlay2Jitter.NextValue());
+        mtShader.SetFloat("_Overlay2OffsetY", overlay2Jitter.NextValue());
+        mtShader.SetFloat("_Overlay2SpeedX", 0);
+        mtShader.SetFloat("_Overlay2SpeedY", 0);
+
+        Graphics.Blit(source, target, mtShader);
       } else {
         base.RenderImageWithFilter(source, target);
       }
     }
 
-    public static void LoadSettings(LoadSettings settings) {
-      settings.SelectNode("CameraFilterNightVision");
+    public override void Load(string moduleName) {
+      LoadSettings settings = new LoadSettings("MovieTime.xml");
+      settings.Open("MovieTime");
+      settings.SelectNode(moduleName + "NightVision");
       contrast = settings.Get<float>("Contrast", contrast);
       brightness = settings.Get<float>("Brightness", brightness);
       overlay1Amount = settings.Get<float>("Overlay1Amount", overlay1Amount);
@@ -94,13 +98,16 @@ namespace MovieTime {
       ambienceLevel = settings.Get<float>("AmbienceLevel", ambienceLevel);
     }
 
-    public static void SaveSettings(SaveSettings settings) {
-      settings.SelectNode("CameraFilterNightVision");
+    public override void Save(string moduleName) {
+      SaveSettings settings = new SaveSettings("MovieTime.xml");
+      settings.Open("MovieTime");
+      settings.SelectNode(moduleName + "NightVision");
       settings.Set<float>("Contrast", contrast);
       settings.Set<float>("Brightness", brightness);
       settings.Set<float>("Overlay1Amount", overlay1Amount);
       settings.Set<float>("Overlay2Amount", overlay2Amount);
       settings.Set<float>("AmbienceLevel", ambienceLevel);
+      settings.Save();
     }
   }
 }

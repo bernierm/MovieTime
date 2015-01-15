@@ -12,6 +12,7 @@ namespace MovieTime {
 
   // Base class for camera filters
   public class CameraFilter {
+
     public enum eCameraMode {
       Normal = 0,
       SepiaFilm = 1,
@@ -22,6 +23,64 @@ namespace MovieTime {
       ColorLoResTV = 6,
       ColorHiResTV = 7,
       NightVision = 8
+    }
+
+    protected static Material mtShader = null;
+    protected static Material nvShader = null;
+
+    protected static Texture2D filmVignette = null;
+    protected static Texture2D scratches = null;
+    protected static Texture2D dust = null;
+    protected static Texture2D noise = null;
+    protected static Texture2D crtMesh = null;
+    protected static Texture2D nvMesh = null;
+    protected static Texture2D vHold = null;
+
+    public static bool InitializeAssets() {
+      if (mtShader == null && nvShader == null && filmVignette == null && scratches == null && dust == null && noise == null && crtMesh == null && nvMesh == null && vHold == null) {
+        mtShader = LoadShaderFile("MovieTime.shader");
+        nvShader = LoadShaderFile("NightVision.shader");
+        filmVignette = LoadTextureFile("FilmVignette.png");
+        scratches = LoadTextureFile("Scratches.png");
+        dust = LoadTextureFile("Dust.png");
+        noise = LoadTextureFile("Noise.png");
+        crtMesh = LoadTextureFile("CRTMesh.png");
+        nvMesh = LoadTextureFile("NVMesh.png");
+        vHold = LoadTextureFile("VHold.png");
+
+        if (filmVignette != null) filmVignette.wrapMode = TextureWrapMode.Repeat;
+        if (scratches != null) scratches.wrapMode = TextureWrapMode.Repeat;
+        if (dust != null) dust.wrapMode = TextureWrapMode.Repeat;
+        if (noise != null) noise.wrapMode = TextureWrapMode.Repeat;
+        if (crtMesh != null) crtMesh.wrapMode = TextureWrapMode.Repeat;
+        if (nvMesh != null) nvMesh.wrapMode = TextureWrapMode.Repeat;
+        if (vHold != null) vHold.wrapMode = TextureWrapMode.Repeat;
+
+        if (mtShader != null && nvShader != null && filmVignette != null && scratches != null && dust != null && noise != null && crtMesh != null && nvMesh != null && vHold != null)
+          return false;
+      }
+      return true;
+    }
+
+    public static void ReleaseAssets() {
+      if (mtShader != null) MonoBehaviour.Destroy(mtShader);
+      mtShader = null;
+      if (nvShader != null) MonoBehaviour.Destroy(nvShader);
+      nvShader = null;
+      if (filmVignette != null) MonoBehaviour.Destroy(filmVignette);
+      filmVignette = null;
+      if (scratches != null) MonoBehaviour.Destroy(scratches);
+      scratches = null;
+      if (dust != null) MonoBehaviour.Destroy(dust);
+      dust = null;
+      if (noise != null) MonoBehaviour.Destroy(noise);
+      noise = null;
+      if (crtMesh != null) MonoBehaviour.Destroy(crtMesh);
+      crtMesh = null;
+      if (nvMesh != null) MonoBehaviour.Destroy(nvMesh);
+      nvMesh = null;
+      if (vHold != null) MonoBehaviour.Destroy(vHold);
+      vHold = null;
     }
 
     // CameraFilter class factory:
@@ -49,42 +108,30 @@ namespace MovieTime {
       return null;
     }
 
-    public static void LoadAllSettings(LoadSettings settings) {
-      CameraFilterNormal.LoadSettings(settings);
-      CameraFilterSepiaFilm.LoadSettings(settings);
-      CameraFilterBlackAndWhiteFilm.LoadSettings(settings);
-      CameraFilterBlackAndWhiteLoResTV.LoadSettings(settings);
-      CameraFilterBlackAndWhiteHiResTV.LoadSettings(settings);
-      CameraFilterColorFilm.LoadSettings(settings);
-      CameraFilterColorLoResTV.LoadSettings(settings);
-      CameraFilterColorHiResTV.LoadSettings(settings);
-      CameraFilterNightVision.LoadSettings(settings);
+    public virtual void Load(string moduleName) {
     }
 
-    public static void SaveAllSettings(SaveSettings settings) {
-      CameraFilterNormal.SaveSettings(settings);
-      CameraFilterSepiaFilm.SaveSettings(settings);
-      CameraFilterBlackAndWhiteFilm.SaveSettings(settings);
-      CameraFilterBlackAndWhiteLoResTV.SaveSettings(settings);
-      CameraFilterBlackAndWhiteHiResTV.SaveSettings(settings);
-      CameraFilterColorFilm.SaveSettings(settings);
-      CameraFilterColorLoResTV.SaveSettings(settings);
-      CameraFilterColorHiResTV.SaveSettings(settings);
-      CameraFilterNightVision.SaveSettings(settings);
+    public virtual void Save(string moduleName) {
     }
 
     public CameraFilter() { }
 
-    public virtual bool Activate() { return false; }
+    public virtual bool Activate() { return true; }
 
     public virtual void Deactivate() { }
 
     public virtual void OptionControls() { }
 
-    public virtual void LateUpdate(bool cameraActivated) { }
+    public virtual void LateUpdate() { }
 
     public virtual void RenderImageWithFilter(RenderTexture source, RenderTexture target) {
       Graphics.Blit(source, target);
+    }
+
+    public virtual void RenderTitlePage(bool title, Texture2D titleTex) {
+      mtShader.SetFloat("_Title", (title && titleTex != null ? 1 : 0));
+      if (title && titleTex != null)
+        mtShader.SetTexture("_TitleTex", titleTex);
     }
 
     protected bool GetToggleValue(string label, bool value) {

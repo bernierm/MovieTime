@@ -26,7 +26,6 @@ namespace MovieTime {
     }
 
     protected static Material mtShader = null;
-    protected static Material nvShader = null;
 
     protected static Texture2D filmVignette = null;
     protected static Texture2D scratches = null;
@@ -37,9 +36,8 @@ namespace MovieTime {
     protected static Texture2D vHold = null;
 
     public static bool InitializeAssets() {
-      if (mtShader == null && nvShader == null && filmVignette == null && scratches == null && dust == null && noise == null && crtMesh == null && nvMesh == null && vHold == null) {
+      if (mtShader == null && filmVignette == null && scratches == null && dust == null && noise == null && crtMesh == null && nvMesh == null && vHold == null) {
         mtShader = LoadShaderFile("MovieTime.shader");
-        nvShader = LoadShaderFile("NightVision.shader");
         filmVignette = LoadTextureFile("FilmVignette.png");
         scratches = LoadTextureFile("Scratches.png");
         dust = LoadTextureFile("Dust.png");
@@ -56,7 +54,7 @@ namespace MovieTime {
         if (nvMesh != null) nvMesh.wrapMode = TextureWrapMode.Repeat;
         if (vHold != null) vHold.wrapMode = TextureWrapMode.Repeat;
 
-        if (mtShader != null && nvShader != null && filmVignette != null && scratches != null && dust != null && noise != null && crtMesh != null && nvMesh != null && vHold != null)
+        if (mtShader != null && filmVignette != null && scratches != null && dust != null && noise != null && crtMesh != null && nvMesh != null && vHold != null)
           return false;
       }
       return true;
@@ -65,8 +63,6 @@ namespace MovieTime {
     public static void ReleaseAssets() {
       if (mtShader != null) MonoBehaviour.Destroy(mtShader);
       mtShader = null;
-      if (nvShader != null) MonoBehaviour.Destroy(nvShader);
-      nvShader = null;
       if (filmVignette != null) MonoBehaviour.Destroy(filmVignette);
       filmVignette = null;
       if (scratches != null) MonoBehaviour.Destroy(scratches);
